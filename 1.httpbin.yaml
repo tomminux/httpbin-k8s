@@ -1,0 +1,69 @@
+## ----------------------------------------------------------------------------
+## ..:: Wordpress POD / Service and Deployment Configuration ::..
+##-----------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin-1
+  namespace: httpbin
+  labels:
+    app: httpbin-1
+spec:
+  type: ClusterIP
+  ports:
+  - name: httpbin-1-80
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+      app: httpbin-1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin-1
+  namespace: httpbin
+  labels:
+    app: httpbin-1
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin-1
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: httpbin-1
+        version: v1
+    spec:
+      containers:
+      - env:
+        - name: service_name
+          value: httpbin-1
+        image: kennethreitz/httpbin
+        imagePullPolicy: Always
+        name: httpbin-1
+        ports:
+        - containerPort: 80
+          protocol: TCP
+---
+## ----------------------------------------------------------------------------
+## ..:: NGINX KIC VS Configuration for Hackazon ::..
+##-----------------------------------------------------------------------------
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServer
+metadata:
+  name: httpbin-1-vs
+  namespace: httpbin
+spec:
+  host: httpbin-1.f5-udf.com
+  upstreams:
+  - name: httpbin-1
+    service: httpbin-1
+    port: 80
+  routes:
+  - path: /
+    action:
+      pass: httpbin-1
